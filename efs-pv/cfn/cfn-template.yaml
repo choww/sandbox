@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: EFS Stack
+
+Parameters:
+  Environment:
+    Type: String
+  Project:
+    Type: String
+  VPCStackName:
+    Type: AWS::SSM::Parameter::Value<String>
+
+Mappings:
+  EKSCluster:
+    staging:
+      Name: sled
+    production:
+      Name: plane
+
+
+Resources:
+  EFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      FileSystemTags:
+        - Key: Name
+          Value:
+            !Sub ${Project}-efs-${Environment}
+      # PerformanceMode: generalPurpose | maxIO
+      #ThroughputMode: bursting | provisioned
+      # must have this if ThroughputMode = provisioned
+      # valid value: 1-1024 MiB/s
+      #ProvisionedThroughputInMibps: 1-1024
+
+  EFSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow inbound NFS traffic to EFS
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${VPCStackName}:VpcId
+
+  # allow inbound NFS traffic to your EFS within the VPC
+  EFSSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        !Ref EFSSecurityGroup
+      # TODO this variable should be exported from a cfn stack or have an ssm param created for it
+      # OR could specify the worker subnet CIDRs specifically
+      # OR could specify a source security group ID as the cluster SG
+      CidrIp: 10.253.0.0/16
+      FromPort: 2049
+      IpProtocol: tcp
+      ToPort: 2049
+
+  EFSMountTargetA:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        !Ref EFS
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+      # get worker subnet
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${VPCStackName}:VpcPrivateInstanceSubnet1Id
+
+  EFSMountTargetB:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        !Ref EFS
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+      # get worker subnet
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${VPCStackName}:VpcPrivateInstanceSubnet2Id
+
+  EFSMountTargetC:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        !Ref EFS
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+      # get worker subnet
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${VPCStackName}:VpcPrivateInstanceSubnet3Id
+
+Outputs:
+  EFSID:
+    Value:
+      !Ref EFS
+    Export:
+      Name:
+        !Sub ${Project}-efs-${Environment}:EFSID
+

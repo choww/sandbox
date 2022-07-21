@@ -1,0 +1,77 @@
+---
+ # use the eks-iam-macro to add the EKS clusters as trusted entities that can assume this role given certain conditions
+$imports:
+  macroName: cfn:export:eks-iam-macro-etc:MacroName
+
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: IAM role for the EFS CSI Driver
+
+Parameters:
+  Environment:
+    Type: String
+  Project:
+    Type: String
+
+Resources:
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Fn::Transform:
+            Name: '{{ macroName }}'
+            Parameters:
+              serviceAccountName: aws-efs-csi-driver:efs-csi-controller-sa
+              environment:
+                !Ref Environment
+      Path: /ec2/
+
+  # IAM policies
+  EFSReadAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - ec2:DescribeAvailabilityZones
+              - elasticfilesystem:DescribeAccessPoints
+              - elasticfilesystem:DescribeFileSystems
+              - elasticfilesystem:DescribeMountTargets
+            Effect: Allow
+            Resource:
+              # TODO replace with the correct EFS ID
+              - !Sub arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/*
+      PolicyName: efs-read-access
+      Roles:
+        - !Ref IAMRole
+
+  ManageEFSAccessPointPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - elasticfilesystem:CreateAccessPoint
+              - elasticfilesystem:DeleteAccessPoint
+            Condition:
+              StringLike:
+                aws:RequestTag/efs.csi.aws.com/cluster: true
+            Effect: Allow
+            Resource:
+              # TODO replace with the correct EFS ID
+              - !Sub arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/*
+      PolicyName: manage-efs-access-point
+      Roles:
+        - !Ref IAMRole
+
+Outputs:
+  IAMRoleARN:
+    Value:
+      !GetAtt IAMRole.Arn
+    Export:
+      Name:
+        !Sub ${Project}-efs-iam-${Environment}:RoleARN

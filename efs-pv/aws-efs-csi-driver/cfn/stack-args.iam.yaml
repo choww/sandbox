@@ -1,0 +1,29 @@
+$defs:
+  component: efs-iam
+  owner: core
+  project: carmen-test
+
+$imports:
+  ApprovedBucketName: cfn:export:approved-cfn-templates:BucketName
+  ServiceRoleARN: cfn:export:cloudformation-service-roles:CloudFormationIAMDeploymentServiceRoleArn
+
+ApprovedTemplateLocation: s3://{{ ApprovedBucketName }}/{{ project }}/{{ component }}
+Capabilities:
+  - CAPABILITY_AUTO_EXPAND
+  - CAPABILITY_IAM
+ServiceRoleARN: '{{ ServiceRoleARN }}'
+
+OnFailure: DELETE
+StackName: '{{ project }}-{{ component }}-{{ environment }}'
+Template: render:cfn-template.iam.yaml
+
+Parameters:
+  Environment: '{{ environment }}'
+  Project: '{{ project }}'
+
+Tags:
+  component: '{{ component }}'
+  environment: '{{ environment }}'
+  lifetime: long
+  owner: '{{ owner }}'
+  project: '{{ project }}'

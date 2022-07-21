@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: carmen-test
+  labels:
+    owner: core
+    serviceName: carmen-test

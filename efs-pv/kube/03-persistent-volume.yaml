@@ -1,0 +1,57 @@
+# EXAMPLE IF STATIC PROVISIONING IS NEEDED
+---
+$imports:
+  efsID: cfn:export:carmen-test-efs-{{ iidy.environment }}:EFSID
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dag-efs
+  namespace: carmen-test
+spec:
+  accessMode:
+    - ReadWriteMany
+  capacity:
+    storage: 5Gi
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: '{{ efsID }}'
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: dag-efs
+  volumeMode: Filesystem
+
+# USE STORAGE CLASS IF DYNAMIC PROVISIONING
+#---
+#$imports:
+#  efsID: cfn:export:carmen-test-efs-{{ iidy.environment }}:EFSID
+#
+#kind: StorageClass
+#apiVersion: storage.k8s.io/v1
+#metadata:
+#  name: dag-efs
+#  namespace: carmen-test
+## ⚠️  PARAMS ARE IMMUTABLE
+#parameters:
+#  # 700 - only read/write/exec by owner
+#  directoryPerms: "700" # must be a string
+#  fileSystemId: '{{ efsID }}'
+#  # the only supported mode
+#  provisioningMode: efs-ap
+#provisioner: efs.csi.aws.com
+#reclaimPolicy: Retain
+#allowVolumeExpansion: true
+#volumeBindingMode: WaitForFirstConsumer
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dag-efs-claim
+  namespace: carmen-test
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: dag-efs

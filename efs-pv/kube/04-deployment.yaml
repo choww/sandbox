@@ -1,0 +1,59 @@
+#---
+#apiVersion: v1
+#kind: Pod
+#metadata:
+#  name: efs-app
+#  namespace: carmen-test
+#spec:
+#  containers:
+#    - name: app
+#      image: centos
+#      command: ["/bin/sh"]
+#      args: ["-c", "while true; do echo $(date -u) >> /data/out; sleep 5; done"]
+#      volumeMounts:
+#        - name: persistent-storage
+#          mountPath: /data
+#  volumes:
+#    - name: persistent-storage
+#      persistentVolumeClaim:
+#        claimName: dag-efs-claim
+
+# EXAMPLE IF DEPLOYMENTS ARE NEEDED
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: efs-app
+  name: efs-app
+  namespace: carmen-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: efs-app
+  template:
+    metadata:
+      labels:
+        app: efs-app
+    spec:
+      containers:
+        - name: app
+          command:
+            - "/bin/sh"
+          args:
+            - "-c"
+            - "while true; do echo $(date -u) >> /data/output.txt; sleep 5; done"
+          image: centos
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /data
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 1000
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: dag-efs-claim

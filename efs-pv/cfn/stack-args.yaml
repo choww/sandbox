@@ -1,0 +1,25 @@
+$defs:
+  component: efs
+  owner: core
+  project: carmen-test
+
+$imports:
+  ServiceRoleARN: cfn:export:cloudformation-service-roles:CloudFormationDeploymentServiceRoleArn
+
+ServiceRoleARN: '{{ ServiceRoleARN }}'
+
+OnFailure: DELETE
+StackName: '{{ project }}-{{ component }}-{{ environment }}'
+Template: cfn-template.yaml
+
+Parameters:
+  Environment: '{{ environment }}'
+  Project: '{{ project }}'
+  VPCStackName: /{{ environment }}/eks/vpc/stack_name
+
+Tags:
+  component: '{{ component }}'
+  environment: '{{ environment }}'
+  lifetime: long
+  owner: '{{ owner }}'
+  project: '{{ project }}'
